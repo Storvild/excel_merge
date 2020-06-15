@@ -1,38 +1,48 @@
-# -*- coding: utf-8 -*-
-#from __future__ import unicode_literals  # Для того чтобы не использовать u''
+"""
+    Объединение файлов Excel и OpenOffice путем суммирования значений во всех листах с выгрузкой результата в файл RESULT.xls.
+    Применяется для получения сводных или итоговых данных из множества однотипных файлов (с одинаковыми листами и расположением данных)
+    Форматирование в результирующем файле при этом теряется.
+    
+    Использование:
+        Помещаем файл ExcelMerge.py в каталог с файлами *.xls, *.xlsx, *.ods и запускаем его
+        В результате в текущем каталоге создастся файл RESULT.xls и автоматически откроется.
+    
+    Примечания:
+        Во всех файлах должны совпадать имена Листов
+        По умолчанию обработка ведется начиная со второго столбца (B) второй строки (Можно изменить в переменных 
+            X_MIN, X_MAX, Y_MIN, Y_MAX)
+
+    Установка:
+        Для использования данного скрипта, необходим Python3 и библиотека pyexcel
+        Python3 можно скачать по ссылке: https://www.python.org/downloads/ затем установить
+        Для установки расширения pyexcel выполнить в командной строке команду: 
+            pip install pyexcel pyexcel-xls pyexcel-xlsx pyexcel-ods
+            
+    Данный скрипт был протестирован на Python 3.6, pyexcel==0.6.2
+"""
+
 import os, sys
-print(sys.version)
 import pyexcel
-#import pyexcel.ext.xls # Deprecated usage since v0.2.2! Explicit import is no longer required. pyexcel.ext.xls is auto imported.
 import glob
 
-curdir = os.path.dirname(__file__) # Текущий каталог, где лежит программа
-print(curdir)
-print(__file__)
-workdir = curdir # Рабочий каталог, он же текущий по умолчанию
+curdir = os.path.abspath(os.path.dirname(__file__)) # Текущий каталог, где лежит этот файл
 
 # === Настройки ===
+WORKDIR = curdir # Рабочий каталог, он же текущий по умолчанию
 
-#workdir = r'e:\NEW\2016-07-18\nika\MY'  # Рабочий каталог
-#if workdir:
-os.chdir(workdir) # Работа в текущем каталоге
+if WORKDIR:
+    os.chdir(WORKDIR) # Работа в текущем каталоге
 
-infile = None # Начальный файл. Может быть None, тогда начальный файл считается первый по списку # os.path.join(curdir,'out','infile.xlsx')
-outfile = 'RESULT.xls' # Имя исходящего результирующего файла XLS (пожжет быть в другой папке) # outfile = os.path.join(curdir,'out','out.xls')
+INFILE = None # Начальный файл. Может быть None, тогда начальный файл считается первый по списку # os.path.join(curdir,'out','infile.xlsx')
+OUTFILE = 'RESULT.xls' # Имя исходящего результирующего файла XLS (может находиться в другой папке) # os.path.join(curdir,'out','out.xls')
 
 X_MIN = 2 # Номер столбца для начала обработки
 X_MAX = 100000 # Максимальный Номер столбца для конца обработки
 Y_MIN = 2 # Номер начальной строки
 Y_MAX = 100000 # Максимальный Номер конечной строки
 
-isopen_file = True  # Открыть результирующий файл после обработки?
-isnotclose = True  # После обработки файла не закрывать окно скрипта
-
-# ПРИМЕЧАНИЯ
-# Во всех файлах должны совпадать имена Листов
-
-#if not os.path.exists('out'):
-#    os.mkdir('out')
+ISOPEN_FILE = True  # Открыть результирующий файл после обработки?
+ISNOTCLOSE = True  # После обработки файла не закрывать окно скрипта
 
 
 def parse_float(x):
@@ -53,13 +63,13 @@ def merge_all_sheets():
     err_all = 0
     files_count = 0
     book_res = None  # Рабочий массив данных
-    if infile:  # В рабочий массив загружаем данные из начального файла, если он задан
-        book_res = pyexcel.get_book_dict(file_name=infile)
+    if INFILE:  # В рабочий массив загружаем данные из начального файла, если он задан
+        book_res = pyexcel.get_book_dict(file_name=INFILE)
 
     files = glob.glob('*.xls*')
-    #sheets = []
+    files.extend(glob.glob('*.ods'))
     for fn in files:
-        if not fn.startswith('~') and fn != outfile and fn != infile:
+        if not fn.startswith('~') and fn != OUTFILE and fn != INFILE:
             print(fn)
             files_count += 1
             if book_res is None:
@@ -89,11 +99,11 @@ def merge_all_sheets():
         print('  Ошибки в файлах: {}'.format(', '.join(err_files)))
     else:
         print('  Ошибок нет')
-    pyexcel.save_book_as(bookdict=book_res, dest_file_name=outfile)
+    pyexcel.save_book_as(bookdict=book_res, dest_file_name=OUTFILE)
 
-    if isopen_file:
+    if ISOPEN_FILE:
         import os
-        os.startfile(outfile)
+        os.startfile(OUTFILE)
 
 
 def merge_first_sheet():
@@ -104,14 +114,14 @@ def merge_first_sheet():
     err_all = 0
     files_count = 0
     sheet_res = None  # Рабочий массив данных
-    if infile:  # В рабочий массив загружаем данные из начального файла, если он задан
-        sheet_res = pyexcel.get_book_dict(file_name=infile)
+    if INFILE:  # В рабочий массив загружаем данные из начального файла, если он задан
+        sheet_res = pyexcel.get_book_dict(file_name=INFILE)
         #sheet_name =
 
     files = glob.glob('*.xls*')
     sheets = []
     for fn in files:
-        if not fn.startswith('~') and fn != outfile and fn != infile:
+        if not fn.startswith('~') and fn != OUTFILE and fn != INFILE:
             print(fn)
             files_count += 1
             if sheet_res is None:
@@ -145,17 +155,17 @@ def merge_first_sheet():
     else:
         print('  Ошибок нет')
 
-    pyexcel.save_as(array=sheet_res, dest_file_name=outfile)
+    pyexcel.save_as(array=sheet_res, dest_file_name=OUTFILE)
 
-    if isopen_file:
+    if ISOPEN_FILE:
         import os
-        os.startfile(outfile)
+        os.startfile(OUTFILE)
 
 
 def main():
     print('Версия Python:', sys.version)
     print('Текущая папка:', curdir)  # .decode('utf-8'),
-    print('Рабочая папка:', workdir)  # .decode('utf-8'),
+    print('Рабочая папка:', WORKDIR)  # .decode('utf-8'),
     print()
     # Слить все файлы в рабочей директории со всеми листами
     merge_all_sheets()
@@ -165,6 +175,6 @@ def main():
 
 if __name__=='__main__':
     main()
-    if isnotclose:
+    if ISNOTCLOSE:
         input()
 
