@@ -100,10 +100,11 @@ def merge_all_sheets():
         pyexcel.save_book_as(bookdict=book_res, dest_file_name=OUTFILE)
 
         if ISOPEN_FILE:
-            import os
             os.startfile(OUTFILE)
     else:
         print('В папке {} файлов не найдено'.format(WORKDIR))
+        if sys.platform == 'win32': # Если Windows открывать пустую папку Explorer'ом
+            os.system('explorer {}'.format(WORKDIR))
 
 def merge_first_sheet():
     """ Объединяет значения в файлах Excel в рабочей директории и записывает результат в RESULT.xls
@@ -158,11 +159,11 @@ def merge_first_sheet():
         pyexcel.save_as(array=sheet_res, dest_file_name=OUTFILE)
 
         if ISOPEN_FILE:
-            import os
             os.startfile(OUTFILE)
     else:
         print('В папке {} файлов не найдено'.format(WORKDIR))
-        #os.system('explorer e:\\')
+        if sys.platform == 'win32': # Если Windows открывать пустую папку Explorer'ом
+            os.system('explorer {}'.format(WORKDIR))
 
 
 def main():
