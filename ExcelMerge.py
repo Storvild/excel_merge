@@ -38,9 +38,12 @@ X_MAX = 100000 # Максимальный Номер столбца для ко�
 Y_MIN = 2 # Номер начальной строки
 Y_MAX = 100000 # Максимальный Номер конечной строки
 
+ISSAVE_FILE = False  # Сохранять файл
 ISOPEN_FILE = True  # Открыть результирующий файл после обработки?
-ISNOTCLOSE = True  # После обработки файла не закрывать окно скрипта
+ISNOTCLOSE = True   # После обработки файла не закрывать окно скрипта
 
+CELL_ANALIZE = 'E2'
+SHEET_ANALIZE = 'МТБ'
 
 def parse_float(x):
     if x == '':
@@ -52,6 +55,38 @@ def parse_float(x):
             res = None
     return res
 
+
+def cell2idx(cellname):
+    """ Возвращает индекс ячейки по x и по y в виде кортежа (x, y) 
+        Индексы начинаются с 0
+        Например:
+            cell2idx('A1') = (0, 0)
+            cell2idx('C10') = (2, 9)
+            cell2idx('BBB58') = (1405, 57)
+    """
+    import string
+    col = ''
+    col_idx = 0
+    row = ''
+    row_idx = 0
+    i = 0
+    for l in cellname.upper()[::-1]:
+        num = string.ascii_uppercase.find(l)
+        if num<0:
+            row += l
+        else:
+            col += l
+            col_idx += (26**i)*(num+1)
+            i += 1
+    col_idx -= 1
+    row_idx = int(row[::-1])-1
+    #col = col[::-1]
+    #row = row[::-1]
+    #print(i, l, num, col_idx)
+    #print(cellname)
+    #print(col, row)
+    return (col_idx, row_idx)
+  
 
 def merge_all_sheets():
     """ Складывает все значения в файлах Excel в рабочей директории по всем листам и записывает результат в RESULT.xls
@@ -68,10 +103,22 @@ def merge_all_sheets():
     if files:
         for fn in files:
             if not fn.startswith('~') and fn != OUTFILE and fn != INFILE:
-                print(fn)
+                if not CELL_ANALIZE:
+                    print(fn)
                 files_count += 1
                 if book_res is None:
                     book_res = pyexcel.get_book_dict(file_name=fn)
+                    
+                    if CELL_ANALIZE:
+                        x_idx, y_idx = cell2idx(CELL_ANALIZE)
+                        for sheet in book_res:
+                            for y, row in enumerate(book_res[sheet]):
+                                for x, cell in enumerate(book_res[sheet][y]):
+                                    if y>=Y_MIN-1 and y<=Y_MAX-1 and x>=X_MIN-1 and x<=X_MAX-1:
+                                        if x == x_idx and y == y_idx:
+                                            if SHEET_ANALIZE==sheet or SHEET_ANALIZE=='':
+                                                print('Значение: {:<5}  {} ({},{}) Лист="{}" Файл="{}"'.format(book_res[sheet][y][x], CELL_ANALIZE, x, y, sheet, fn))
+
                 else:
                     book_cur = pyexcel.get_book_dict(file_name=fn)
                     for sheet in book_res:
@@ -86,6 +133,11 @@ def merge_all_sheets():
                                         if cell1 is not None and cell2 is not None:
                                             book_res[sheet][y][x] = cell1 + cell2
                                             #print(x, book_res[sheet][y][x], type(book_res[sheet][y][x]))
+                                            if CELL_ANALIZE:
+                                                x_idx, y_idx = cell2idx(CELL_ANALIZE)
+                                                if x == x_idx and y == y_idx:
+                                                    if SHEET_ANALIZE==sheet or SHEET_ANALIZE=='':
+                                                        print('Значение: {:<5}  {} ({},{}) Лист="{}" Файл="{}"'.format(book_cur[sheet][y][x], CELL_ANALIZE, x, y, sheet, fn))
                                     except:
                                         print('Ошибка! Файл: {} Лист: {} Строка: {} Колонка: {}'.format(fn, sheet, y, x))
                                         err_all += 1
@@ -97,10 +149,12 @@ def merge_all_sheets():
             print('  Ошибки в файлах: {}'.format(', '.join(err_files)))
         else:
             print('  Ошибок нет')
-        pyexcel.save_book_as(bookdict=book_res, dest_file_name=OUTFILE)
 
-        if ISOPEN_FILE:
-            os.startfile(OUTFILE)
+        if ISSAVE_FILE:
+            pyexcel.save_book_as(bookdict=book_res, dest_file_name=OUTFILE)
+
+            if ISOPEN_FILE:
+                os.startfile(OUTFILE)
     else:
         print('В папке {} файлов не найдено'.format(WORKDIR))
         if sys.platform == 'win32': # Если Windows открывать пустую папку Explorer'ом
